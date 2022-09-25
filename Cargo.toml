@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies.tokio]
 version = "1.21.1"
-features = ["macros", "rt-multi-thread"]
+features = ["net", "macros", "rt-multi-thread"]
