@@ -9,4 +9,12 @@ pub enum Error {
     InvalidVersion,
     #[error(transparent)]
     Io(#[from] io::Error),
+    #[error(transparent)]
+    Request(#[from] RequestError),
+}
+
+#[derive(Error, Debug)]
+pub enum RequestError {
+    #[error("unsupported command")]
+    UnsupportedCommand = 0x7,
 }
