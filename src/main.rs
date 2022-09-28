@@ -3,6 +3,8 @@
 mod error;
 
 use crate::error::{Error, RequestError};
+use bb8_redis::bb8::Pool;
+use bb8_redis::RedisConnectionManager;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
 use tokio::io;
@@ -13,13 +15,20 @@ use tokio::net::{TcpListener, TcpStream};
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
+    let manager = RedisConnectionManager::new("")?;
+    let pool = Pool::builder().build(manager).await?;
+
     let listener = TcpListener::bind("").await?;
 
     loop {
         let (mut stream, _addr) = listener.accept().await?;
+        let pool = pool.clone();
 
         tokio::spawn(async move {
-            handle(&mut stream).await;
+            if let Err(_err) = handle(&mut stream, pool).await {
+                todo!()
+            }
+
             stream.shutdown().await
         });
     }
@@ -32,7 +41,7 @@ const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
 const CONNECT_COMMAND: u8 = 0x1;
 
-async fn handle(stream: &mut TcpStream) -> error::Result<()> {
+async fn handle(stream: &mut TcpStream, _pool: Pool<RedisConnectionManager>) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
