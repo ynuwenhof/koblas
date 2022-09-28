@@ -19,7 +19,7 @@ pub enum RequestError {
     #[error("general error")]
     General = 0x1,
     #[error("network unreachable")]
-    NetworkUnreachable = 0x03,
+    NetworkUnreachable = 0x3,
     #[error("host unreachable")]
     HostUnreachable,
     #[error("connection refused")]
