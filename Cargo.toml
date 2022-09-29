@@ -9,6 +9,10 @@ thiserror = "1.0.36"
 bb8-redis = "0.11.0"
 color-eyre = "0.6.2"
 
+[dependencies.rand_core]
+version = "0.6.4"
+features = ["std"]
+
 [dependencies.tokio]
 version = "1.21.1"
 features = ["net", "macros", "io-util", "rt-multi-thread"]
