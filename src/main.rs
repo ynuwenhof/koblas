@@ -32,12 +32,8 @@ async fn main() -> color_eyre::Result<()> {
     }
 }
 
-const IPV4_TYPE: u8 = 0x1;
-const IPV6_TYPE: u8 = 0x4;
-const DOMAIN_TYPE: u8 = 0x3;
 const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
-const CONNECT_COMMAND: u8 = 0x1;
 
 async fn handle(stream: &mut TcpStream, _pool: SqlitePool) -> error::Result<()> {
     let mut buf = [0u8; 2];
@@ -68,29 +64,29 @@ async fn handle(stream: &mut TcpStream, _pool: SqlitePool) -> error::Result<()> 
         });
     }
 
-    let mut peer = match socks(stream, buf).await {
-        Ok(peer) => peer,
-        Err(err) => {
-            let reply = match err {
-                SocksError::InvalidAddr { .. } => 0x8,
-                SocksError::InvalidCommand { .. } => 0x7,
-                _ => 0x1,
-            };
-
-            let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
-            stream.write_all(&buf).await?;
-
-            return Err(err.into());
+    let mut reply = SUCCESS_REPLY;
+    let res = socks(stream, buf).await;
+    if let Err(ref err) = res {
+        reply = match err {
+            SocksError::InvalidAddr { .. } => 0x8,
+            SocksError::InvalidCommand { .. } => 0x7,
+            _ => 0x1,
         }
-    };
+    }
 
-    let buf = [SOCKS_VERSION, SUCCESS_REPLY, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
+    let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
     stream.write_all(&buf).await?;
 
+    let mut peer = res?;
     io::copy_bidirectional(stream, &mut peer).await?;
 
     Ok(())
 }
+
+const IPV4_TYPE: u8 = 0x1;
+const IPV6_TYPE: u8 = 0x4;
+const DOMAIN_TYPE: u8 = 0x3;
+const CONNECT_COMMAND: u8 = 0x1;
 
 async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksError> {
     let cmd = buf[1];
