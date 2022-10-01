@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 argon2 = "0.4.1"
 color-eyre = "0.6.2"
+itertools = "0.10.5"
 thiserror = "1.0.36"
 
 [dependencies.clap]

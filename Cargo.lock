@@ -545,6 +545,7 @@ dependencies = [
  "argon2",
  "clap",
  "color-eyre",
+ "itertools",
  "rand_core",
  "sqlx",
  "thiserror",
