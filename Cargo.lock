@@ -548,7 +548,6 @@ dependencies = [
  "itertools",
  "rand_core",
  "sqlx",
- "thiserror",
  "tokio",
 ]
 
