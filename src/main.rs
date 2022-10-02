@@ -1,6 +1,9 @@
 mod error;
 
-use crate::error::{Error, SocksError};
+use crate::error::{AuthError, Error, SocksError};
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHasher};
+use rand_core::OsRng;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
@@ -32,6 +35,10 @@ async fn main() -> color_eyre::Result<()> {
     }
 }
 
+const AUTH_VERSION: u8 = 0x1;
+const AUTH_METHOD: u8 = 0x2;
+const NO_AUTH_METHOD: u8 = 0x0;
+const NO_METHOD: u8 = 0xff;
 const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
 
@@ -51,7 +58,24 @@ async fn handle(stream: &mut TcpStream, _pool: SqlitePool) -> error::Result<()> 
     let mut buf = vec![0u8; len];
     stream.read_exact(&mut buf).await?;
 
-    // TODO: Handle method specific subnegotiation
+    let method = *buf
+        .iter()
+        .find(|&&m| m == NO_AUTH_METHOD || m == AUTH_METHOD)
+        .unwrap_or(&NO_METHOD);
+
+    let buf = [SOCKS_VERSION, method];
+    stream.write_all(&buf).await?;
+
+    let res = match method {
+        AUTH_METHOD => auth(stream).await,
+        NO_METHOD => return Err(Error::MethodNotFound),
+        _ => Ok(()),
+    };
+
+    let reply = res.is_err() as u8;
+    let buf = [AUTH_VERSION, reply];
+    stream.write_all(&buf).await?;
+    res?;
 
     let mut buf = [0u8; 4];
     stream.read_exact(&mut buf).await?;
@@ -81,6 +105,36 @@ async fn handle(stream: &mut TcpStream, _pool: SqlitePool) -> error::Result<()> 
     io::copy_bidirectional(stream, &mut peer).await?;
 
     Ok(())
+}
+
+async fn auth(stream: &mut TcpStream) -> Result<(), AuthError> {
+    let mut buf = [0u8; 2];
+    stream.read_exact(&mut buf).await?;
+
+    let ver = buf[0];
+    if ver != AUTH_VERSION {
+        return Err(AuthError::InvalidVersion {
+            expected: AUTH_VERSION,
+            found: ver,
+        });
+    }
+
+    let len = buf[1] as usize;
+    let mut buf = vec![0u8; len];
+    stream.read_exact(&mut buf).await?;
+    let username = String::from_utf8(buf)?;
+
+    let len = stream.read_u8().await? as usize;
+    let mut buf = vec![0u8; len];
+    stream.read_exact(&mut buf).await?;
+    let password = String::from_utf8(buf)?;
+
+    let salt = SaltString::generate(&mut OsRng);
+
+    let argon2 = Argon2::default();
+    let hash = argon2.hash_password(password.as_bytes(), &salt)?;
+
+    todo!()
 }
 
 const IPV4_TYPE: u8 = 0x1;

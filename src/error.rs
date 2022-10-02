@@ -12,6 +12,7 @@ pub enum Error {
     Auth(AuthError),
     InvalidVersion { expected: u8, found: u8 },
     Io(io::Error),
+    MethodNotFound,
     Socks(SocksError),
 }
 
@@ -25,6 +26,7 @@ impl Display for Error {
                 write!(f, "invalid version (expected {expected}, found {found})")
             }
             Self::Io(err) => err.fmt(f),
+            Self::MethodNotFound => write!(f, "method not found"),
             Self::Socks(err) => err.fmt(f),
         }
     }
