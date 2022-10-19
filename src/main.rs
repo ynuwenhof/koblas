@@ -3,21 +3,49 @@ mod error;
 
 use crate::config::Config;
 use crate::error::{AuthError, Error, SocksError};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use clap::{Parser, Subcommand};
 use color_eyre::eyre::eyre;
+use rand_core::OsRng;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+#[derive(Parser)]
+struct Cli {
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Hash { password: String },
+}
+
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let config_path = dirs::config_dir()
-        .map(|p| p.join("koblas").join("koblas.toml"))
+    let cli = Cli::parse();
+
+    if let Some(Command::Hash { password }) = cli.command {
+        let salt = SaltString::generate(&mut OsRng);
+
+        let hash = Argon2::default().hash_password(password.as_bytes(), &salt)?;
+        println!("{hash}");
+        return Ok(());
+    }
+
+    let config_path = cli
+        .config
+        .or_else(|| dirs::config_dir().map(|p| p.join("koblas").join("koblas.toml")))
         .ok_or_else(|| eyre!("unable to locate config directory"))?;
 
     let config = if config_path.exists() {
