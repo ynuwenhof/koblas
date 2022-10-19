@@ -4,8 +4,6 @@ use crate::error::{AuthError, Error, SocksError};
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher};
 use rand_core::OsRng;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::SqlitePool;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
 use tokio::io;
@@ -16,17 +14,13 @@ use tokio::net::{TcpListener, TcpStream};
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let options = SqliteConnectOptions::from_str("")?.create_if_missing(true);
-    let pool = SqlitePoolOptions::new().connect_with(options).await?;
-
     let listener = TcpListener::bind("").await?;
 
     loop {
         let (mut stream, _addr) = listener.accept().await?;
-        let pool = pool.clone();
 
         tokio::spawn(async move {
-            if let Err(_err) = handle(&mut stream, pool).await {
+            if let Err(_err) = handle(&mut stream).await {
                 todo!()
             }
 
@@ -42,7 +36,7 @@ const NO_METHOD: u8 = 0xff;
 const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
 
-async fn handle(stream: &mut TcpStream, _pool: SqlitePool) -> error::Result<()> {
+async fn handle(stream: &mut TcpStream) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
