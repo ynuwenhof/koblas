@@ -16,13 +16,17 @@ use tokio::net::{TcpListener, TcpStream};
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    // TODO: Proper error message
     let config_path = dirs::config_dir()
         .map(|p| p.join("koblas").join("koblas.toml"))
-        .ok_or_else(|| eyre!("todo"))?;
+        .ok_or_else(|| eyre!("unable to locate config directory"))?;
 
-    // TODO: Log error error and fallback to default config
-    let config = Config::from_path(config_path).await?;
+    let config = if config_path.exists() {
+        Config::from_path(config_path).await?
+    } else {
+        // TODO: We should probably report that no config file was found at the specified path!
+
+        Config::default()
+    };
 
     let listener = TcpListener::bind(config.server.addr).await?;
 
