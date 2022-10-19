@@ -1,5 +1,7 @@
+mod config;
 mod error;
 
+use crate::config::Config;
 use crate::error::{AuthError, Error, SocksError};
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher};
@@ -14,7 +16,9 @@ use tokio::net::{TcpListener, TcpStream};
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let listener = TcpListener::bind("").await?;
+    let config = Config::from_path("").await?;
+
+    let listener = TcpListener::bind(config.server.addr).await?;
 
     loop {
         let (mut stream, _addr) = listener.accept().await?;
