@@ -3,11 +3,11 @@ mod error;
 
 use crate::config::Config;
 use crate::error::{AuthError, Error, SocksError};
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHasher};
-use rand_core::OsRng;
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use color_eyre::eyre::eyre;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -16,15 +16,24 @@ use tokio::net::{TcpListener, TcpStream};
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let config = Config::from_path("").await?;
+    // TODO: Proper error message
+    let config_path = dirs::config_dir()
+        .map(|p| p.join("koblas").join("koblas.toml"))
+        .ok_or_else(|| eyre!("todo"))?;
+
+    // TODO: Log error error and fallback to default config
+    let config = Config::from_path(config_path).await?;
 
     let listener = TcpListener::bind(config.server.addr).await?;
 
+    let config = Arc::new(config);
+
     loop {
         let (mut stream, _addr) = listener.accept().await?;
+        let config = config.clone();
 
         tokio::spawn(async move {
-            if let Err(_err) = handle(&mut stream).await {
+            if let Err(_err) = handle(&mut stream, config).await {
                 todo!()
             }
 
@@ -40,7 +49,7 @@ const NO_METHOD: u8 = 0xff;
 const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
 
-async fn handle(stream: &mut TcpStream) -> error::Result<()> {
+async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
@@ -58,14 +67,17 @@ async fn handle(stream: &mut TcpStream) -> error::Result<()> {
 
     let method = *buf
         .iter()
-        .find(|&&m| m == NO_AUTH_METHOD || m == AUTH_METHOD)
+        .find(|&&m| {
+            m == NO_AUTH_METHOD && !config.server.auth
+                || m == AUTH_METHOD && (config.server.auth || !config.users.is_empty())
+        })
         .unwrap_or(&NO_METHOD);
 
     let buf = [SOCKS_VERSION, method];
     stream.write_all(&buf).await?;
 
     let res = match method {
-        AUTH_METHOD => auth(stream).await,
+        AUTH_METHOD => auth(stream, config).await,
         NO_METHOD => return Err(Error::MethodNotFound),
         _ => Ok(()),
     };
@@ -105,7 +117,7 @@ async fn handle(stream: &mut TcpStream) -> error::Result<()> {
     Ok(())
 }
 
-async fn auth(stream: &mut TcpStream) -> Result<(), AuthError> {
+async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthError> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
@@ -127,12 +139,14 @@ async fn auth(stream: &mut TcpStream) -> Result<(), AuthError> {
     stream.read_exact(&mut buf).await?;
     let password = String::from_utf8(buf)?;
 
-    let salt = SaltString::generate(&mut OsRng);
+    let pass = config
+        .users
+        .get(&username)
+        .ok_or(AuthError::UsernameNotFound(username))?;
 
-    let argon2 = Argon2::default();
-    let hash = argon2.hash_password(password.as_bytes(), &salt)?;
+    let hash = PasswordHash::new(pass)?;
 
-    todo!()
+    Ok(Argon2::default().verify_password(password.as_bytes(), &hash)?)
 }
 
 const IPV4_TYPE: u8 = 0x1;

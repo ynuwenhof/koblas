@@ -55,6 +55,7 @@ pub enum AuthError {
     InvalidVersion { expected: u8, found: u8 },
     Io(io::Error),
     Password(password_hash::Error),
+    UsernameNotFound(String),
     Utf8(FromUtf8Error),
 }
 
@@ -69,6 +70,7 @@ impl Display for AuthError {
             Self::Io(err) => err.fmt(f),
             Self::Password(err) => err.fmt(f),
             Self::Utf8(err) => err.fmt(f),
+            Self::UsernameNotFound(username) => write!(f, "username `{username}` not found",),
         }
     }
 }
