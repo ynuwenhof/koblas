@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-argon2 = "0.4.1"
 color-eyre = "0.6.2"
 dirs = "4.0.0"
 itertools = "0.10.5"
 toml = "0.5.9"
+
+[dependencies.argon2]
+version = "0.4.1"
+features = ["std"]
 
 [dependencies.clap]
 version = "4.0.6"
