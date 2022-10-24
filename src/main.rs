@@ -31,9 +31,9 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
-    color_eyre::install()?;
-
     let cli = Cli::parse();
+
+    color_eyre::install()?;
 
     if let Some(Command::Hash { password }) = cli.command {
         let salt = SaltString::generate(&mut OsRng);
@@ -108,16 +108,17 @@ async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()
     let buf = [SOCKS_VERSION, method];
     stream.write_all(&buf).await?;
 
-    let res = match method {
-        AUTH_METHOD => auth(stream, config).await,
+    match method {
+        AUTH_METHOD => {
+            let res = auth(stream, config).await;
+            let reply = res.is_err() as u8;
+            let buf = [AUTH_VERSION, reply];
+            stream.write_all(&buf).await?;
+            res?;
+        }
         NO_METHOD => return Err(Error::MethodNotFound),
-        _ => Ok(()),
-    };
-
-    let reply = res.is_err() as u8;
-    let buf = [AUTH_VERSION, reply];
-    stream.write_all(&buf).await?;
-    res?;
+        _ => {}
+    }
 
     let mut buf = [0u8; 4];
     stream.read_exact(&mut buf).await?;
@@ -141,6 +142,7 @@ async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()
     }
 
     let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
+
     stream.write_all(&buf).await?;
 
     let mut peer = res?;
