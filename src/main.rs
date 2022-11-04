@@ -10,11 +10,10 @@ use color_eyre::eyre::eyre;
 use rand_core::OsRng;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
-use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::{io, net};
 
 #[derive(Parser)]
 struct Cli {
@@ -204,7 +203,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             stream.read_exact(&mut octets).await?;
 
             let port = stream.read_u16().await?;
-            SocketAddr::new(Ipv4Addr::from(octets).into(), port)
+            vec![SocketAddr::new(Ipv4Addr::from(octets).into(), port)]
         }
         DOMAIN_TYPE => {
             let len = stream.read_u8().await? as usize;
@@ -214,14 +213,16 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             let domain = String::from_utf8(buf)?;
             let port = stream.read_u16().await?;
 
-            SocketAddr::from_str(&format!("{domain}:{port}"))?
+            net::lookup_host(format!("{domain}:{port}"))
+                .await?
+                .collect()
         }
         IPV6_TYPE => {
             let mut octets = [0u8; 16];
             stream.read_exact(&mut octets).await?;
 
             let port = stream.read_u16().await?;
-            SocketAddr::new(Ipv6Addr::from(octets).into(), port)
+            vec![SocketAddr::new(Ipv6Addr::from(octets).into(), port)]
         }
         _ => {
             return Err(SocksError::InvalidAddr {
@@ -231,5 +232,5 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
         }
     };
 
-    Ok(TcpStream::connect(dest).await?)
+    Ok(TcpStream::connect(&dest[..]).await?)
 }
