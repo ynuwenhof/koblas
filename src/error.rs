@@ -1,7 +1,6 @@
 use argon2::password_hash;
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
-use std::net::AddrParseError;
 use std::string::FromUtf8Error;
 use std::{error, fmt, io, result};
 
@@ -95,7 +94,6 @@ impl From<FromUtf8Error> for AuthError {
 
 #[derive(Debug)]
 pub enum SocksError {
-    Addr(AddrParseError),
     InvalidAddr { expected: Vec<u8>, found: u8 },
     InvalidCommand { expected: u8, found: u8 },
     Io(io::Error),
@@ -107,7 +105,6 @@ impl error::Error for SocksError {}
 impl Display for SocksError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Addr(err) => err.fmt(f),
             Self::InvalidAddr { expected, found } => {
                 let expected = expected.iter().join(", ");
 
@@ -119,12 +116,6 @@ impl Display for SocksError {
             Self::Io(err) => err.fmt(f),
             Self::Utf8(err) => err.fmt(f),
         }
-    }
-}
-
-impl From<AddrParseError> for SocksError {
-    fn from(err: AddrParseError) -> Self {
-        Self::Addr(err)
     }
 }
 
