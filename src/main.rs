@@ -8,7 +8,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::eyre;
 use rand_core::OsRng;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -203,7 +203,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             stream.read_exact(&mut octets).await?;
 
             let port = stream.read_u16().await?;
-            vec![SocketAddr::new(Ipv4Addr::from(octets).into(), port)]
+            vec![SocketAddr::new(IpAddr::from(octets), port)]
         }
         DOMAIN_TYPE => {
             let len = stream.read_u8().await? as usize;
@@ -222,7 +222,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             stream.read_exact(&mut octets).await?;
 
             let port = stream.read_u16().await?;
-            vec![SocketAddr::new(Ipv6Addr::from(octets).into(), port)]
+            vec![SocketAddr::new(IpAddr::from(octets), port)]
         }
         _ => {
             return Err(SocksError::InvalidAddr {

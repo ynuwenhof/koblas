@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 use tokio::fs;
 use toml::de;
@@ -46,5 +46,5 @@ impl Default for Server {
 }
 
 fn default_socket_addr() -> SocketAddr {
-    SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 1080)
+    SocketAddr::new(IpAddr::from([127, 0, 0, 1]), 1080)
 }
