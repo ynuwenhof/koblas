@@ -14,6 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
+use tracing::error;
 
 #[derive(Parser)]
 struct Cli {
@@ -28,10 +29,25 @@ enum Command {
     Hash { password: String },
 }
 
+fn install_tracing() {
+    use tracing_error::ErrorLayer;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{fmt, EnvFilter};
+
+    let fmt_layer = fmt::layer().pretty();
+
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(EnvFilter::from_default_env())
+        .with(ErrorLayer::default())
+        .init();
+}
+
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     let cli = Cli::parse();
 
+    install_tracing();
     color_eyre::install()?;
 
     if let Some(Command::Hash { password }) = cli.command {
@@ -60,12 +76,13 @@ async fn main() -> color_eyre::Result<()> {
     let config = Arc::new(config);
 
     loop {
-        let (mut stream, _addr) = listener.accept().await?;
+        let (mut stream, addr) = listener.accept().await?;
         let config = config.clone();
 
         tokio::spawn(async move {
-            if let Err(_err) = handle(&mut stream, config).await {
-                todo!()
+            if let Err(err) = handle(&mut stream, config).await {
+                let peer = addr.ip().to_string();
+                error!(peer, "{err}");
             }
 
             stream.shutdown().await
