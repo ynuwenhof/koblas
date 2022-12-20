@@ -22,10 +22,13 @@ impl Display for Error {
         match self {
             Self::Auth(err) => err.fmt(f),
             Self::InvalidVersion { expected, found } => {
-                write!(f, "invalid version (expected {expected}, found {found})")
+                write!(
+                    f,
+                    "invalid protocol version (expected {expected}, found {found})"
+                )
             }
             Self::Io(err) => err.fmt(f),
-            Self::MethodNotFound => write!(f, "method not found"),
+            Self::MethodNotFound => write!(f, "no applicable method not found"),
             Self::Socks(err) => err.fmt(f),
         }
     }
@@ -64,7 +67,10 @@ impl Display for AuthError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidVersion { expected, found } => {
-                write!(f, "invalid version (expected {expected}, found {found})")
+                write!(
+                    f,
+                    "invalid authentication version (expected {expected}, found {found})"
+                )
             }
             Self::Io(err) => err.fmt(f),
             Self::Password(err) => err.fmt(f),
@@ -108,7 +114,7 @@ impl Display for SocksError {
             Self::InvalidAddr { expected, found } => {
                 let expected = expected.iter().join(", ");
 
-                write!(f, "invalid addr (expected {expected}, found {found})")
+                write!(f, "invalid addr type (expected {expected}, found {found})")
             }
             Self::InvalidCommand { expected, found } => {
                 write!(f, "invalid command (expected {expected}, found {found})")
