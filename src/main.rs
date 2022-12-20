@@ -34,10 +34,8 @@ fn install_tracing() {
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{fmt, EnvFilter};
 
-    let fmt_layer = fmt::layer().pretty();
-
     tracing_subscriber::registry()
-        .with(fmt_layer)
+        .with(fmt::layer().pretty())
         .with(EnvFilter::from_default_env())
         .with(ErrorLayer::default())
         .init();
