@@ -5,7 +5,7 @@ use std::path::Path;
 use tokio::fs;
 use toml::de;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
@@ -27,7 +27,7 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Server {
     #[serde(default = "default_socket_addr")]

@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
-use tracing::error;
+use tracing::{error, error_span, Instrument};
 
 #[derive(Parser)]
 struct Cli {
@@ -35,7 +35,7 @@ fn install_tracing() {
     use tracing_subscriber::{fmt, EnvFilter};
 
     tracing_subscriber::registry()
-        .with(fmt::layer().pretty())
+        .with(fmt::layer().with_target(false))
         .with(EnvFilter::from_default_env())
         .with(ErrorLayer::default())
         .init();
@@ -78,10 +78,16 @@ async fn main() -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            if let Err(err) = handle(&mut stream, config).await {
-                let peer = addr.ip().to_string();
-                error!(peer, "{err}");
+            let peer = addr.ip().to_string();
+            let span = error_span!("stream", peer);
+
+            async {
+                if let Err(err) = handle(&mut stream, config).await {
+                    error!("{err}");
+                }
             }
+            .instrument(span)
+            .await;
 
             stream.shutdown().await
         });
