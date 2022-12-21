@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
-use tracing::{error, error_span, Instrument};
+use tracing::{error, error_span, info, Instrument};
 
 #[derive(Parser)]
 struct Cli {
@@ -64,8 +64,6 @@ async fn main() -> color_eyre::Result<()> {
     let config = if config_path.exists() {
         Config::from_path(config_path).await?
     } else {
-        // TODO: We should probably report that no config file was found at the specified path!
-
         Config::default()
     };
 
@@ -78,13 +76,17 @@ async fn main() -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            let peer = addr.ip().to_string();
-            let span = error_span!("stream", peer);
+            let addr = addr.ip().to_string();
+            let span = error_span!("client", addr);
 
             async {
+                info!("client connected");
+
                 if let Err(err) = handle(&mut stream, config).await {
                     error!("{err}");
                 }
+
+                info!("client disconnected");
             }
             .instrument(span)
             .await;
