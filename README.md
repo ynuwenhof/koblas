@@ -2,6 +2,10 @@
 
 A lightweight, configurable and high performance socks5 proxy server.
 
+* No authentication.
+
+* Username and password authentication.
+
 ## License
 
 This project is licensed under either of the following licenses, at your option:
