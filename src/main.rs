@@ -14,9 +14,9 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
-use tracing::{error, error_span, info, Instrument};
+use tracing::{debug, error, error_span, info, Instrument};
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 struct Cli {
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
@@ -24,7 +24,7 @@ struct Cli {
     command: Option<Command>,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Command {
     Hash { password: String },
 }
@@ -48,6 +48,8 @@ async fn main() -> color_eyre::Result<()> {
     install_tracing();
     color_eyre::install()?;
 
+    debug!("{:?}", cli);
+
     if let Some(Command::Hash { password }) = cli.command {
         let salt = SaltString::generate(&mut OsRng);
 
@@ -66,6 +68,8 @@ async fn main() -> color_eyre::Result<()> {
     } else {
         Config::default()
     };
+
+    debug!("{:?}", config);
 
     let listener = TcpListener::bind(config.server.addr).await?;
 
