@@ -1,5 +1,7 @@
 # koblas
 
+Lightweight socks5 proxy server.
+
 ## License
 
 This project is licensed under either of
