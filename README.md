@@ -3,7 +3,6 @@
 A lightweight, configurable and high performance socks5 proxy server.
 
 * No authentication.
-
 * Username and password authentication.
 
 ## License
