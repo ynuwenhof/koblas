@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
-use tracing::{debug, error, error_span, info, Instrument};
+use tracing::{debug, error, error_span, info, warn, Instrument};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -63,15 +63,17 @@ async fn main() -> color_eyre::Result<()> {
         .or_else(|| dirs::config_dir().map(|p| p.join("koblas").join("koblas.toml")))
         .ok_or_else(|| eyre!("unable to locate config directory"))?;
 
-    debug!("{}", config_path.display());
+    debug!("config file path: {}", config_path.display());
 
     let config = if config_path.exists() {
         Config::from_path(config_path).await?
     } else {
+        warn!("config file doesn't exist using default fallback config");
+
         Config::default()
     };
 
-    debug!("{:?}", config);
+    debug!("{:#?}", config);
 
     let listener = TcpListener::bind(config.server.addr).await?;
 
