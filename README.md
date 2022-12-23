@@ -13,8 +13,10 @@ addr = "127.0.0.1:1080"
 auth = true
 
 [users]
-alice = "$argon2id$v=19$m=4096,t=3,p=1$ixDChRX/PY3HTP3b+majlQ$QFuft73Gl6ETGO1NFmh+ZXyzaqL6IeVOMQYe+k16lk4"
-bob = "$argon2id$v=19$m=4096,t=3,p=1$31S8wbUC6BbX3xaJSpTLBQ$7YZbzCsX23vRQZZLR5ptGT3wt+U1Uj53r4jsvGU+6zQ"
+# username = "alice", password = "QDuMGlxdhpZt"
+alice = "$argon2id$v=19$m=8,t=2,p=1$bWUwSXl2M2pYNU9xcVBocw$f4gFaE7p0qWRKw"
+# username = "bob", password = "ceQvWaDGVeTv"
+bob = "$argon2id$v=19$m=8,t=2,p=1$ZExzaTM3aks1WjU1a3g4UA$J+EiueHYuR/dlA"
 ```
 
 ## License
