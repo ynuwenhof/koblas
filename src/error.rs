@@ -28,7 +28,7 @@ impl Display for Error {
                 )
             }
             Self::Io(err) => err.fmt(f),
-            Self::MethodNotFound => write!(f, "no applicable method not found"),
+            Self::MethodNotFound => write!(f, "method not found"),
             Self::Socks(err) => err.fmt(f),
         }
     }
