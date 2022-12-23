@@ -63,6 +63,8 @@ async fn main() -> color_eyre::Result<()> {
         .or_else(|| dirs::config_dir().map(|p| p.join("koblas").join("koblas.toml")))
         .ok_or_else(|| eyre!("unable to locate config directory"))?;
 
+    debug!("{}", config_path.display());
+
     let config = if config_path.exists() {
         Config::from_path(config_path).await?
     } else {
