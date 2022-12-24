@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::fmt;
+use std::fmt::{Debug, Formatter};
 use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 use tokio::fs;
 use toml::de;
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
@@ -24,6 +26,14 @@ impl Config {
 
     fn from_slice(bytes: &[u8]) -> Result<Self, de::Error> {
         toml::from_slice(bytes)
+    }
+}
+
+impl Debug for Config {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("server", &self.server)
+            .finish()
     }
 }
 
