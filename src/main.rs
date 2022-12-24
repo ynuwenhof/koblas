@@ -68,12 +68,15 @@ async fn main() -> color_eyre::Result<()> {
     let config = if config_path.exists() {
         Config::from_path(config_path).await?
     } else {
-        warn!("config file doesn't exist using default fallback config");
+        warn!(
+            "config file `{}` not found, using default fallback config",
+            config_path.display()
+        );
 
         Config::default()
     };
 
-    debug!("{:#?}", config);
+    debug!("{:?}", config);
 
     let listener = TcpListener::bind(config.server.addr).await?;
 
@@ -88,13 +91,13 @@ async fn main() -> color_eyre::Result<()> {
             let span = error_span!("client", addr);
 
             async {
-                info!("client connected");
+                info!("connected");
 
                 if let Err(err) = handle(&mut stream, config).await {
                     error!("{err}");
                 }
 
-                info!("client disconnected");
+                info!("disconnected");
             }
             .instrument(span)
             .await;
@@ -176,7 +179,8 @@ async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()
     stream.write_all(&buf).await?;
 
     let mut peer = res?;
-    io::copy_bidirectional(stream, &mut peer).await?;
+    let (sent, received) = io::copy_bidirectional(stream, &mut peer).await?;
+    info!("sent {sent} bytes and received {received} bytes");
 
     Ok(())
 }
