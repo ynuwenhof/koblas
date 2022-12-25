@@ -87,8 +87,7 @@ async fn main() -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            let addr = addr.ip().to_string();
-            let span = error_span!("client", addr);
+            let span = error_span!("client", %addr);
 
             async {
                 info!("connected");
