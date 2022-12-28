@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io, net};
-use tracing::{debug, error, error_span, info, warn, Instrument};
+use tracing::{debug, error, error_span, field, info, warn, Instrument, Span};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -87,7 +87,7 @@ async fn main() -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            let span = error_span!("client", %addr);
+            let span = error_span!("client", %addr, peer = field::Empty);
 
             async {
                 info!("connected");
@@ -178,6 +178,11 @@ async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()
     stream.write_all(&buf).await?;
 
     let mut peer = res?;
+    if let Ok(addr) = peer.peer_addr() {
+        let span = Span::current();
+        span.record("peer", field::display(addr));
+    }
+
     let (sent, received) = io::copy_bidirectional(stream, &mut peer).await?;
     info!("sent {sent} bytes and received {received} bytes");
 
