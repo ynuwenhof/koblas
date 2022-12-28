@@ -87,7 +87,12 @@ async fn main() -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            let span = error_span!("client", %addr, peer = field::Empty);
+            let span = error_span!(
+                "client",
+                %addr,
+                peer = field::Empty,
+                user = field::Empty
+            );
 
             async {
                 info!("connected");
@@ -214,11 +219,15 @@ async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthErr
     let pass = config
         .users
         .get(&username)
-        .ok_or(AuthError::UsernameNotFound(username))?;
+        .ok_or(AuthError::UsernameNotFound(username.to_owned()))?;
 
     let hash = PasswordHash::new(pass)?;
+    Argon2::default().verify_password(password.as_bytes(), &hash)?;
 
-    Ok(Argon2::default().verify_password(password.as_bytes(), &hash)?)
+    let span = Span::current();
+    span.record("user", field::display(username));
+
+    Ok(())
 }
 
 const IPV4_TYPE: u8 = 0x1;
