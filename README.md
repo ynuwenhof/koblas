@@ -1,4 +1,6 @@
-# koblas
+<h1 align="center">koblas</h1>
+
+## About
 
 A lightweight, configurable and high performance socks5 proxy server.
 
@@ -6,6 +8,23 @@ A lightweight, configurable and high performance socks5 proxy server.
 * Username and password authentication.
 
 ## Configuration
+
+Koblas doesn't create the config file for you and has no default config file location.
+
+Recommended config file locations:
+
+* Linux: `/etc/koblas/koblas.toml`
+* Windows: `%ProgramData%\koblas\koblas.toml`
+
+If no config file is provided, the default fallback config will be used.
+
+```toml
+[server]
+addr = "127.0.0.1:1080"
+auth = false
+```
+
+> :warning: The default config allows anyone to connect without authenticating.
 
 ```toml
 [server]
