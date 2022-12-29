@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::fs;
 use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
-use tokio::fs;
 use toml::de;
 
 #[derive(Default, Deserialize, Serialize)]
@@ -17,9 +17,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub async fn from_path(path: impl AsRef<Path>) -> color_eyre::Result<Self> {
+    pub fn from_path(path: impl AsRef<Path>) -> color_eyre::Result<Self> {
         let path = path.as_ref();
-        let buf = fs::read(path).await?;
+        let buf = fs::read(path)?;
 
         Ok(Self::from_slice(&buf)?)
     }

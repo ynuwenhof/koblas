@@ -6,13 +6,13 @@ use crate::error::{AuthError, Error, SocksError};
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use clap::{Parser, Subcommand};
-use color_eyre::eyre::eyre;
 use rand_core::OsRng;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::runtime::Builder;
 use tokio::{io, net};
 use tracing::{debug, error, error_span, field, info, warn, Instrument, Span};
 
@@ -41,8 +41,7 @@ fn install_tracing() {
         .init();
 }
 
-#[tokio::main]
-async fn main() -> color_eyre::Result<()> {
+fn main() -> color_eyre::Result<()> {
     let cli = Cli::parse();
 
     install_tracing();
@@ -58,28 +57,28 @@ async fn main() -> color_eyre::Result<()> {
         return Ok(());
     }
 
-    let config_path = cli
-        .config
-        .or_else(|| dirs::config_dir().map(|p| p.join("koblas").join("koblas.toml")))
-        .ok_or_else(|| eyre!("unable to locate config directory"))?;
-
-    debug!("config file path: {}", config_path.display());
-
-    let config = if config_path.exists() {
-        Config::from_path(config_path).await?
-    } else {
-        warn!(
-            "config file `{}` not found, using default fallback config",
-            config_path.display()
-        );
-
-        Config::default()
-    };
+    let config = cli.config.map_or_else(
+        || {
+            warn!("config file path not set, using default fallback config");
+            Ok(Config::default())
+        },
+        |path| {
+            debug!("config file path: {}", path.display());
+            Config::from_path(path)
+        },
+    )?;
 
     debug!("{:?}", config);
 
-    let listener = TcpListener::bind(config.server.addr).await?;
+    Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("Failed building the Runtime")
+        .block_on(run(config))
+}
 
+async fn run(config: Config) -> color_eyre::Result<()> {
+    let listener = TcpListener::bind(config.server.addr).await?;
     let config = Arc::new(config);
 
     loop {
