@@ -19,16 +19,6 @@ Make sure the current stable release of [Rust](https://rust-lang.org/tools/insta
 cargo install koblas
 ```
 
-### Manual
-
-Make sure the current stable release of [Rust](https://rust-lang.org/tools/install) is installed.
-
-```
-git clone https://github.com/ynuwenhof/koblas.git
-cd koblas
-cargo install .
-```
-
 ## Configuration
 
 Koblas doesn't have a default config file location, but we recommend the following:
