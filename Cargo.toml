@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Lightweight SOCKS5 proxy server"
 readme = "README.md"
+homepage = "https://github.com/ynuwenhof/koblas"
 repository = "https://github.com/ynuwenhof/koblas"
 license = "MIT OR Apache-2.0"
 keywords = ["proxy", "socks", "server"]
