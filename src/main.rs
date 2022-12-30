@@ -86,12 +86,16 @@ async fn run(config: Config) -> color_eyre::Result<()> {
         let config = config.clone();
 
         tokio::spawn(async move {
-            let span = error_span!(
-                "client",
-                %addr,
-                peer = field::Empty,
-                user = field::Empty
-            );
+            let span = if config.server.anon {
+                Span::none()
+            } else {
+                error_span!(
+                    "client",
+                    %addr,
+                    peer = field::Empty,
+                    user = field::Empty
+                )
+            };
 
             async {
                 info!("connected");

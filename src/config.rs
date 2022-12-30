@@ -44,6 +44,8 @@ pub struct Server {
     pub addr: SocketAddr,
     #[serde(default)]
     pub auth: bool,
+    #[serde(default)]
+    pub anon: bool,
 }
 
 impl Default for Server {
@@ -51,6 +53,7 @@ impl Default for Server {
         Self {
             addr: default_socket_addr(),
             auth: Default::default(),
+            anon: Default::default(),
         }
     }
 }
