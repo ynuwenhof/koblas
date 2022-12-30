@@ -2,7 +2,7 @@
 name = "koblas"
 version = "0.1.0"
 edition = "2021"
-description = "Lightweight socks5 proxy server"
+description = "Lightweight SOCKS5 proxy server"
 readme = "README.md"
 repository = "https://github.com/ynuwenhof/koblas"
 license = "MIT OR Apache-2.0"
