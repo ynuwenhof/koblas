@@ -64,7 +64,13 @@ fn main() -> color_eyre::Result<()> {
         },
         |path| {
             debug!("config file path: {}", path.display());
-            Config::from_path(path)
+
+            if path.exists() {
+                Config::from_path(path)
+            } else {
+                warn!("config file doesn't exist, using default fallback config");
+                Ok(Config::default())
+            }
         },
     )?;
 
