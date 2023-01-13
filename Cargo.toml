@@ -22,7 +22,7 @@ features = ["std"]
 
 [dependencies.clap]
 version = "4.0.6"
-features = ["derive"]
+features = ["derive", "env"]
 
 [dependencies.rand_core]
 version = "0.6.4"
