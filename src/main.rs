@@ -18,8 +18,16 @@ use tracing::{debug, error, error_span, field, info, warn, Instrument, Span};
 
 #[derive(Debug, Parser)]
 struct Cli {
-    #[arg(short, long, value_name = "FILE")]
-    config: Option<PathBuf>,
+    #[arg(short, long, env = "KOBLAS_ADDRESS", default_value_t = IpAddr::from([127, 0, 0, 1]))]
+    addr: IpAddr,
+    #[arg(short, long, env = "KOBLAS_PORT", default_value_t = 1080)]
+    port: u16,
+    #[arg(long, env = "KOBLAS_AUTHENTICATE")]
+    auth: bool,
+    #[arg(long, env = "KOBLAS_ANONYMIZE")]
+    anon: bool,
+    #[arg(short, long, env = "KOBLAS_USERS_PATH", value_name = "FILE")]
+    users: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -57,42 +65,46 @@ fn main() -> color_eyre::Result<()> {
         return Ok(());
     }
 
-    let config = cli.config.map_or_else(
+    let config = cli.users.as_ref().map_or_else(
         || {
-            warn!("config file path not set, using default fallback config");
+            warn!("users file path not set");
             Ok(Config::default())
         },
         |path| {
-            debug!("config file path: {}", path.display());
+            debug!("users file path: {}", path.display());
 
             if path.exists() {
                 Config::from_path(path)
             } else {
-                warn!("config file doesn't exist, using default fallback config");
+                warn!("users file doesn't exist");
                 Ok(Config::default())
             }
         },
     )?;
 
-    debug!("{:?}", config);
+    debug!("loaded {} users", config.users.len());
 
     Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Failed building the Runtime")
-        .block_on(run(config))
+        .block_on(run(cli, config))
 }
 
-async fn run(config: Config) -> color_eyre::Result<()> {
-    let listener = TcpListener::bind(config.server.addr).await?;
+async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
+    let listener = TcpListener::bind((cli.addr, cli.port)).await?;
+
+    let cli = Arc::new(cli);
     let config = Arc::new(config);
 
     loop {
         let (mut stream, addr) = listener.accept().await?;
+
+        let cli = cli.clone();
         let config = config.clone();
 
         tokio::spawn(async move {
-            let span = if config.server.anon {
+            let span = if cli.anon {
                 Span::none()
             } else {
                 error_span!(
@@ -106,7 +118,7 @@ async fn run(config: Config) -> color_eyre::Result<()> {
             async {
                 info!("connected");
 
-                if let Err(err) = handle(&mut stream, config).await {
+                if let Err(err) = handle(&mut stream, cli, config).await {
                     error!("{err}");
                 }
 
@@ -127,7 +139,7 @@ const NO_METHOD: u8 = 0xff;
 const SOCKS_VERSION: u8 = 0x5;
 const SUCCESS_REPLY: u8 = 0x0;
 
-async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()> {
+async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
@@ -146,8 +158,8 @@ async fn handle(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()
     let method = *buf
         .iter()
         .find(|&&m| {
-            m == NO_AUTH_METHOD && !config.server.auth
-                || m == AUTH_METHOD && (config.server.auth || !config.users.is_empty())
+            m == NO_AUTH_METHOD && !cli.auth
+                || m == AUTH_METHOD && (cli.auth || !config.users.is_empty())
         })
         .unwrap_or(&NO_METHOD);
 
