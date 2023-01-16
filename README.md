@@ -29,21 +29,35 @@ cargo install --path .
 
 ## Configuration
 
-Koblas doesn't have a default config file location, but we recommend the following locations:
+Koblas can be configured via environment variables or command line arguments.
 
-* Linux: `/etc/koblas/koblas.toml`
-* MacOS: `/etc/koblas/koblas.toml`
-* Windows: `%ProgramData%\koblas\koblas.toml`
+Missing keys will fallback to their default value.
 
-Missing keys in the configuration file will fallback to their default value.
-
-| Keys   | Description                                                    | Default            |
-|--------|----------------------------------------------------------------|--------------------|
-| `addr` | Socket address on which to listen for incoming TCP connections | `"127.0.0.1:1080"` |
-| `auth` | Require clients to authenticate using username/password        | `false`            |
-| `anon` | Exclude sensitive information from the logs                    | `false`            |
+| Key                   | Description                                             | Default     |
+|-----------------------|---------------------------------------------------------|-------------|
+| `KOBLAS_ADDRESS`      | Address on which to listen for incoming TCP connections | `127.0.0.1` |
+| `KOBLAS_PORT`         | Port on which to listen for incoming TCP connections    | `1080`      |
+| `KOBLAS_AUTHENTICATE` | Require clients to authenticate using username/password | `false`     |
+| `KOBLAS_ANONYMIZE`    | Exclude sensitive information from the logs             | `false`     |
+| `KOBLAS_USERS_PATH`   | File path to the list of existing users                 | `None`      |
 
 > :warning: The default configuration allows anyone to connect without having to authenticate!
+
+Koblas doesn't have a default users file location, but we recommend the following locations:
+
+* Linux: `/etc/koblas/users.toml`
+* MacOS: `/etc/koblas/users.toml`
+* Windows: `%ProgramData%\koblas\users.toml`
+
+### Example
+
+```toml
+[users]
+# Username = "alice", password = "QDuMGlxdhpZt"
+alice = "$argon2id$v=19$m=8,t=2,p=1$bWUwSXl2M2pYNU9xcVBocw$f4gFaE7p0qWRKw"
+# Username = "bob", password = "ceQvWaDGVeTv"
+bob = "$argon2id$v=19$m=8,t=2,p=1$ZExzaTM3aks1WjU1a3g4UA$J+EiueHYuR/dlA"
+```
  
 ## License
 
