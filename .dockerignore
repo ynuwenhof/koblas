@@ -1,0 +1,6 @@
+/Dockerfile
+/LICENSE*
+/README.md
+
+/target/
+**/*.rs.bk
