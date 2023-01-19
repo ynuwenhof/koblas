@@ -71,8 +71,6 @@ fn main() -> color_eyre::Result<()> {
             Ok(Config::default())
         },
         |path| {
-            debug!("users file path: {}", path.display());
-
             if path.exists() {
                 Config::from_path(path)
             } else {
