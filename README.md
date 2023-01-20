@@ -15,16 +15,47 @@ Make sure the current stable release of [Rust](https://rust-lang.org/tools/insta
 
 #### Registry
 
-```
+```bash
 cargo install koblas
 ```
 
 #### Manual
 
-```
+```bash
 git clone https://github.com/ynuwenhof/koblas.git
 cd koblas
 cargo install --path .
+```
+
+### Docker
+
+Make sure the [Docker Engine](https://docs.docker.com/engine/install) is installed.
+
+There's currently no image shared on the [Docker Hub](https://hub.docker.com) registry, you will have to build one yourself.
+
+Run the following commands to build the image:
+
+```bash
+git clone https://github.com/ynuwenhof/koblas.git
+cd koblas
+docker build -t ynuwenhof/koblas:latest .
+```
+
+Hash passwords by running the following command:
+
+```bash
+docker run -it --rm ynuwenhof/koblas:latest hash "correct-horse-battery-staple"
+```
+
+Run the following command to start the server:
+
+```bash
+docker run -d -p 1080:1080 \
+  -v path/to/users.toml:/etc/koblas/users.toml \
+  -e RUST_LOG=debug \
+  -e KOBLAS_AUTHENTICATE=true \
+  -e KOBLAS_ANONYMIZE=false \
+  --name koblas ynuwenhof/koblas:latest
 ```
 
 ## Configuration
