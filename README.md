@@ -38,7 +38,7 @@ this will return an [Argon2id](https://en.wikipedia.org/wiki/Argon2) password ha
 After installing, you can run the server with:
 
 ```bash
-koblas -a 0.0.0.0 --auth -u path/to/users.toml
+koblas -a 0.0.0.0 --auth -u /path/to/users.toml
 ```
 
 this will bind the server to `0.0.0.0:1080`.
@@ -69,7 +69,7 @@ After building the image, you can run the server with:
 
 ```bash
 docker run -d -p 1080:1080 \
-  -v path/to/users.toml:/etc/koblas/users.toml \
+  -v /path/to/users.toml:/etc/koblas/users.toml \
   -e RUST_LOG=debug \
   -e KOBLAS_AUTHENTICATE=true \
   -e KOBLAS_ANONYMIZE=false \
