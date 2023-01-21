@@ -27,6 +27,22 @@ cd koblas
 cargo install --path .
 ```
 
+Hash passwords by running the following command:
+
+```bash
+koblas hash "correct-horse-battery-staple"
+```
+
+this will return an [Argon2id](https://en.wikipedia.org/wiki/Argon2) password hash.
+
+After installing, you can run the server with:
+
+```bash
+koblas -a 0.0.0.0 --auth -u path/to/users.toml
+```
+
+this will bind the server to `0.0.0.0:1080`.
+
 ### Docker
 
 Make sure the [Docker Engine](https://docs.docker.com/engine/install) is installed.
@@ -47,7 +63,9 @@ Hash passwords by running the following command:
 docker run -it --rm ynuwenhof/koblas:latest hash "correct-horse-battery-staple"
 ```
 
-Run the following command to start the server:
+this will return an [Argon2id](https://en.wikipedia.org/wiki/Argon2) password hash.
+
+After building the image, you can run the server with:
 
 ```bash
 docker run -d -p 1080:1080 \
@@ -57,6 +75,8 @@ docker run -d -p 1080:1080 \
   -e KOBLAS_ANONYMIZE=false \
   --name koblas ynuwenhof/koblas:latest
 ```
+
+this will bind the server to `0.0.0.0:1080`.
 
 ## Configuration
 
