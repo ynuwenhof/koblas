@@ -55,7 +55,7 @@ fn main() -> color_eyre::Result<()> {
     install_tracing();
     color_eyre::install()?;
 
-    debug!("{:?}", cli);
+    debug!("{cli:?}");
 
     if let Some(Command::Hash { password }) = cli.command {
         let salt = SaltString::generate(&mut OsRng);
