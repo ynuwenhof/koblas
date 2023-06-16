@@ -12,7 +12,7 @@ keywords = ["proxy", "socks", "server"]
 [dependencies]
 color-eyre = "0.6.2"
 itertools = "0.10.5"
-toml = "0.7.3"
+toml = "0.7.4"
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 
@@ -21,7 +21,7 @@ version = "0.5.0"
 features = ["std"]
 
 [dependencies.clap]
-version = "4.2.1"
+version = "4.3.4"
 features = ["derive", "env"]
 
 [dependencies.rand_core]
@@ -29,13 +29,13 @@ version = "0.6.4"
 features = ["std"]
 
 [dependencies.serde]
-version = "1.0.159"
+version = "1.0.164"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "1.27.0"
+version = "1.28.2"
 features = ["fs", "net", "io-util", "rt-multi-thread"]
 
 [dependencies.tracing-subscriber]
-version = "0.3.16"
+version = "0.3.17"
 features = ["env-filter"]
