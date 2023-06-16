@@ -88,6 +88,7 @@ Missing keys will fallback to their default value.
 |-----------------------|---------------------------------------------------------|-------------|
 | `KOBLAS_ADDRESS`      | Address on which to listen for incoming TCP connections | `127.0.0.1` |
 | `KOBLAS_PORT`         | Port on which to listen for incoming TCP connections    | `1080`      |
+| `KOBLAS_LIMIT`        | Maximum amount of clients to handle at once             | `255`       |
 | `KOBLAS_AUTHENTICATE` | Require clients to authenticate using username/password | `false`     |
 | `KOBLAS_ANONYMIZE`    | Exclude sensitive information from the logs             | `false`     |
 | `KOBLAS_USERS_PATH`   | File path to the list of existing users                 | `None`      |

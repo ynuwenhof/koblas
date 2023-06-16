@@ -10,6 +10,7 @@ use rand_core::OsRng;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Builder;
@@ -22,6 +23,8 @@ struct Cli {
     addr: IpAddr,
     #[arg(short, long, env = "KOBLAS_PORT", default_value_t = 1080)]
     port: u16,
+    #[arg(short, long, env = "KOBLAS_LIMIT", default_value_t = 255)]
+    limit: i32,
     #[arg(long, env = "KOBLAS_AUTHENTICATE")]
     auth: bool,
     #[arg(long, env = "KOBLAS_ANONYMIZE")]
@@ -94,12 +97,21 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
 
     let cli = Arc::new(cli);
     let config = Arc::new(config);
+    let clients = Arc::new(AtomicI32::new(0));
 
     loop {
         let (mut stream, addr) = listener.accept().await?;
 
+        if clients.load(Ordering::SeqCst) >= cli.limit {
+            let _ = stream.shutdown().await;
+            continue;
+        }
+
         let cli = cli.clone();
         let config = config.clone();
+        let clients = clients.clone();
+
+        clients.fetch_add(1, Ordering::SeqCst);
 
         tokio::spawn(async move {
             let span = if cli.anon {
@@ -119,6 +131,8 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
                 if let Err(err) = handle(&mut stream, cli, config).await {
                     error!("{err}");
                 }
+
+                clients.fetch_sub(1, Ordering::SeqCst);
 
                 info!("disconnected");
             }
