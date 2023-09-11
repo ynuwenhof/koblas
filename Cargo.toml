@@ -1,6 +1,6 @@
 [package]
 name = "koblas"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Lightweight SOCKS5 proxy server"
 readme = "README.md"
