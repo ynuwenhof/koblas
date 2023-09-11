@@ -47,9 +47,13 @@ this will bind the server to `0.0.0.0:1080`.
 
 Make sure the [Docker Engine](https://docs.docker.com/engine/install) is installed.
 
-There's currently no image shared on the [Docker Hub](https://hub.docker.com) registry, you will have to build one yourself.
+Pull the latest image from the [Docker Hub](https://hub.docker.com) registry with:
 
-Run the following commands to build the image:
+```bash
+docker pull ynuwenhof/koblas:latest
+```
+
+Run the following commands to build the image yourself instead:
 
 ```bash
 git clone https://github.com/ynuwenhof/koblas.git
@@ -65,7 +69,7 @@ docker run -it --rm ynuwenhof/koblas:latest hash "correct-horse-battery-staple"
 
 this will return an [Argon2id](https://en.wikipedia.org/wiki/Argon2) password hash.
 
-After building the image, you can run the server with:
+After pulling or building the image, you can run the server with:
 
 ```bash
 docker run -d -p 1080:1080 \
