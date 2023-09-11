@@ -71,7 +71,7 @@ After building the image, you can run the server with:
 docker run -d -p 1080:1080 \
   -v /path/to/users.toml:/etc/koblas/users.toml \
   -e RUST_LOG=debug \
-  -e KOBLAS_AUTHENTICATE=true \
+  -e KOBLAS_NO_AUTHENTICATION=false \
   -e KOBLAS_ANONYMIZE=false \
   --name koblas ynuwenhof/koblas:latest
 ```
@@ -82,18 +82,18 @@ this will bind the server to `0.0.0.0:1080`.
 
 Koblas can be configured via environment variables or command line arguments.
 
-Missing keys will fallback to their default value.
+Missing keys will fall back to their default value.
 
-| Key                   | Description                                             | Default     |
-|-----------------------|---------------------------------------------------------|-------------|
-| `KOBLAS_ADDRESS`      | Address on which to listen for incoming TCP connections | `127.0.0.1` |
-| `KOBLAS_PORT`         | Port on which to listen for incoming TCP connections    | `1080`      |
-| `KOBLAS_LIMIT`        | Maximum amount of clients to handle at once             | `255`       |
-| `KOBLAS_AUTHENTICATE` | Require clients to authenticate using username/password | `false`     |
-| `KOBLAS_ANONYMIZE`    | Exclude sensitive information from the logs             | `false`     |
-| `KOBLAS_USERS_PATH`   | File path to the list of existing users                 | `None`      |
+| Key                        | Description                                                                 | Default     |
+|----------------------------|-----------------------------------------------------------------------------|-------------|
+| `KOBLAS_ADDRESS`           | Address on which to listen for incoming TCP connections                     | `127.0.0.1` |
+| `KOBLAS_PORT`              | Port on which to listen for incoming TCP connections                        | `1080`      |
+| `KOBLAS_LIMIT`             | Maximum amount of clients to handle at once                                 | `255`       |
+| `KOBLAS_NO_AUTHENTICATION` | Don't require clients to authenticate using a username/password combination | `false`     |
+| `KOBLAS_ANONYMIZATION`     | Exclude sensitive information from the logs                                 | `false`     |
+| `KOBLAS_USERS_PATH`        | File path to the list of existing users                                     | `None`      |
 
-> :warning: The default configuration allows anyone to connect without having to authenticate!
+> :warning: The default configuration requires everyone to connect with a pre-existing username/password combination.
 
 Koblas doesn't have a default users file location, but we recommend the following locations:
 

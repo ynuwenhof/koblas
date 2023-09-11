@@ -25,9 +25,9 @@ struct Cli {
     port: u16,
     #[arg(short, long, env = "KOBLAS_LIMIT", default_value_t = 255)]
     limit: i32,
-    #[arg(long, env = "KOBLAS_AUTHENTICATE")]
-    auth: bool,
-    #[arg(long, env = "KOBLAS_ANONYMIZE")]
+    #[arg(short, long, env = "KOBLAS_NO_AUTHENTICATION")]
+    no_auth: bool,
+    #[arg(long, env = "KOBLAS_ANONYMIZATION")]
     anon: bool,
     #[arg(short, long, env = "KOBLAS_USERS_PATH", value_name = "FILE")]
     users: Option<PathBuf>,
@@ -170,8 +170,8 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
     let method = *buf
         .iter()
         .find(|&&m| {
-            m == NO_AUTH_METHOD && !cli.auth
-                || m == AUTH_METHOD && (cli.auth || !config.users.is_empty())
+            m == NO_AUTH_METHOD && cli.no_auth
+                || m == AUTH_METHOD && (!cli.no_auth || !config.users.is_empty())
         })
         .unwrap_or(&NO_METHOD);
 
