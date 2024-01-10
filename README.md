@@ -81,7 +81,7 @@ docker run -d -p 1080:1080 \
 ```
 
 ```yaml
-version = "3.8"
+version: "3.8"
 services:
   koblas:
     image: ynuwenhof/koblas:latest
