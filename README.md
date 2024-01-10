@@ -80,6 +80,24 @@ docker run -d -p 1080:1080 \
   --name koblas ynuwenhof/koblas:latest
 ```
 
+```yaml
+version = "3.8"
+services:
+  koblas:
+    image: ynuwenhof/koblas:latest
+    container_name: koblas
+    restart: unless-stopped
+    ports:
+      - 1080:1080
+    environment:
+      RUST_LOG: debug
+      KOBLAS_LIMIT: 256
+      KOBLAS_NO_AUTHENTICATION: false
+      KOBLAS_ANONYMIZATION: true
+    volumes:
+      - /path/to/users.toml:/etc/koblas/users.toml
+```
+
 this will bind the server to `0.0.0.0:1080`.
 
 ## Configuration
