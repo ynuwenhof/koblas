@@ -80,6 +80,10 @@ docker run -d -p 1080:1080 \
   --name koblas ynuwenhof/koblas:latest
 ```
 
+this will bind the server to `0.0.0.0:1080`.
+
+Deploy the server with Docker Compose:
+
 ```yaml
 version: "3.8"
 services:
@@ -97,8 +101,6 @@ services:
     volumes:
       - /path/to/users.toml:/etc/koblas/users.toml
 ```
-
-this will bind the server to `0.0.0.0:1080`.
 
 ## Configuration
 
