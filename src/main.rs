@@ -9,8 +9,8 @@ use clap::{Parser, Subcommand};
 use rand_core::OsRng;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Builder;
@@ -95,12 +95,23 @@ fn main() -> color_eyre::Result<()> {
 async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
     let listener = TcpListener::bind((cli.addr, cli.port)).await?;
 
+    info!(
+        "listening on {}:{} for incoming connections",
+        cli.addr, cli.port
+    );
+
     let cli = Arc::new(cli);
     let config = Arc::new(config);
     let clients = Arc::new(AtomicI32::new(0));
 
     loop {
-        let (mut stream, addr) = listener.accept().await?;
+        let (mut stream, addr) = match listener.accept().await {
+            Ok(s) => s,
+            Err(err) => {
+                error!("{err}");
+                continue;
+            }
+        };
 
         if clients.load(Ordering::SeqCst) >= cli.limit {
             let _ = stream.shutdown().await;
