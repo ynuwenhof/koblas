@@ -29,8 +29,8 @@ struct Cli {
     no_auth: bool,
     #[arg(long, env = "KOBLAS_ANONYMIZATION")]
     anon: bool,
-    #[arg(short, long, env = "KOBLAS_USERS_PATH", value_name = "FILE")]
-    users: Option<PathBuf>,
+    #[arg(short, long, env = "KOBLAS_CONFIG_PATH", value_name = "FILE")]
+    config: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -68,16 +68,16 @@ fn main() -> color_eyre::Result<()> {
         return Ok(());
     }
 
-    let config = cli.users.as_ref().map_or_else(
+    let config = cli.config.as_ref().map_or_else(
         || {
-            warn!("users file path not set");
+            warn!("config file path not set");
             Ok(Config::default())
         },
         |path| {
             if path.exists() {
                 Config::from_path(path)
             } else {
-                warn!("users file doesn't exist");
+                warn!("config file doesn't exist");
                 Ok(Config::default())
             }
         },
@@ -113,16 +113,9 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
             }
         };
 
-        if clients.load(Ordering::SeqCst) >= cli.limit {
-            let _ = stream.shutdown().await;
-            continue;
-        }
-
         let cli = cli.clone();
         let config = config.clone();
         let clients = clients.clone();
-
-        clients.fetch_add(1, Ordering::SeqCst);
 
         tokio::spawn(async move {
             let span = if cli.anon {
@@ -137,6 +130,17 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
             };
 
             async {
+                let ip = addr.ip();
+                if clients.load(Ordering::SeqCst) >= cli.limit
+                    || config.is_blacklisted(&ip)
+                    || !config.is_whitelisted(&ip)
+                {
+                    warn!("connection denied");
+                    return;
+                }
+
+                clients.fetch_add(1, Ordering::SeqCst);
+
                 info!("connected");
 
                 if let Err(err) = handle(&mut stream, cli, config).await {

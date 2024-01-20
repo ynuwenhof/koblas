@@ -15,7 +15,7 @@ USER koblas
 
 ENV KOBLAS_ADDRESS=0.0.0.0 \
     KOBLAS_PORT=1080 \
-    KOBLAS_USERS_PATH=/etc/koblas/users.toml
+    KOBLAS_CONFIG_PATH=/etc/koblas/config.toml
 
 EXPOSE 1080
 
