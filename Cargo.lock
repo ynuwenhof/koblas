@@ -348,6 +348,7 @@ dependencies = [
  "argon2",
  "clap",
  "color-eyre",
+ "ipnet",
  "itertools",
  "rand_core",
  "serde",
