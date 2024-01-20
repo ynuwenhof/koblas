@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "koblas"
-version = "0.1.6"
+version = "1.0.0"
 dependencies = [
  "argon2",
  "clap",
