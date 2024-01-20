@@ -113,16 +113,9 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
             }
         };
 
-        if clients.load(Ordering::SeqCst) >= cli.limit {
-            let _ = stream.shutdown().await;
-            continue;
-        }
-
         let cli = cli.clone();
         let config = config.clone();
         let clients = clients.clone();
-
-        clients.fetch_add(1, Ordering::SeqCst);
 
         tokio::spawn(async move {
             let span = if cli.anon {
@@ -137,6 +130,17 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
             };
 
             async {
+                let ip = addr.ip();
+                if clients.load(Ordering::SeqCst) >= cli.limit
+                    || config.is_blacklisted(&ip)
+                    || !config.is_whitelisted(&ip)
+                {
+                    warn!("connection denied");
+                    return;
+                }
+
+                clients.fetch_add(1, Ordering::SeqCst);
+
                 info!("connected");
 
                 if let Err(err) = handle(&mut stream, cli, config).await {
