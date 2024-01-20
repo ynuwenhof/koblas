@@ -29,8 +29,8 @@ struct Cli {
     no_auth: bool,
     #[arg(long, env = "KOBLAS_ANONYMIZATION")]
     anon: bool,
-    #[arg(short, long, env = "KOBLAS_USERS_PATH", value_name = "FILE")]
-    users: Option<PathBuf>,
+    #[arg(short, long, env = "KOBLAS_CONFIG_PATH", value_name = "FILE")]
+    config: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -68,16 +68,16 @@ fn main() -> color_eyre::Result<()> {
         return Ok(());
     }
 
-    let config = cli.users.as_ref().map_or_else(
+    let config = cli.config.as_ref().map_or_else(
         || {
-            warn!("users file path not set");
+            warn!("config file path not set");
             Ok(Config::default())
         },
         |path| {
             if path.exists() {
                 Config::from_path(path)
             } else {
-                warn!("users file doesn't exist");
+                warn!("config file doesn't exist");
                 Ok(Config::default())
             }
         },
