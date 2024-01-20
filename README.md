@@ -4,6 +4,7 @@ A lightweight [SOCKS5](https://datatracker.ietf.org/doc/html/rfc1928) proxy serv
 
 * Multi-User
 * Configurable
+* Ipv4 & Ipv6
 * Blacklist & Whitelist
 * No Authentication
 * [Username/Password](https://datatracker.ietf.org/doc/html/rfc1929) Authentication
