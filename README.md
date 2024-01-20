@@ -129,6 +129,25 @@ Koblas doesn't have a default config file location, but we recommend the followi
 ### Example
 
 ```toml
+# All matching IPs will be automatically blocked
+blacklist = [
+    # Blacklist all IPs between
+    # 192.168.2.0 and 192.168.2.255
+    "192.168.2.0/24",
+    # Blacklist a single IP
+    "192.168.3.0/32",
+]
+
+# All non matching IPs will be automatically blocked
+# Keep empty to disable the whitelist
+whitelist = [
+    # Whitelist all IPs between
+    # 192.168.0.0 and 192.168.0.255
+    "192.168.0.0/24",
+    # Whitelist a single IP
+    "192.168.1.0/32",
+]
+
 [users]
 # Username = "alice", password = "QDuMGlxdhpZt"
 alice = "$argon2id$v=19$m=8,t=2,p=1$bWUwSXl2M2pYNU9xcVBocw$f4gFaE7p0qWRKw"
