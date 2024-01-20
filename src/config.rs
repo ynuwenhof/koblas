@@ -1,5 +1,7 @@
-use serde::{Deserialize, Serialize};
+use ipnet::IpNet;
+use serde::Deserialize;
 use std::collections::BTreeMap;
+use std::net::IpAddr;
 use std::path::Path;
 use std::str::FromStr;
 use std::{fs, str};
@@ -10,6 +12,10 @@ use toml::de;
 pub struct Config {
     #[serde(default)]
     pub users: BTreeMap<String, String>,
+    #[serde(default)]
+    pub whitelist: Vec<IpNet>,
+    #[serde(default)]
+    pub blacklist: Vec<IpNet>,
 }
 
 impl Config {
@@ -20,6 +26,14 @@ impl Config {
         let str = str::from_utf8(&buf)?;
 
         Ok(Self::from_str(str)?)
+    }
+
+    pub fn is_blacklisted(&self, ip: &IpAddr) -> bool {
+        self.blacklist.iter().any(|n| n.contains(ip))
+    }
+
+    pub fn is_whitelisted(&self, ip: &IpAddr) -> bool {
+        self.whitelist.is_empty() || self.whitelist.iter().any(|n| n.contains(ip))
     }
 }
 
