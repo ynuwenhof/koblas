@@ -38,7 +38,7 @@ this will return an [Argon2id](https://en.wikipedia.org/wiki/Argon2) password ha
 After installing, you can run the server with:
 
 ```bash
-koblas -a 0.0.0.0 --auth -u /path/to/users.toml
+koblas -a 0.0.0.0 --auth -c /path/to/config.toml
 ```
 
 this will bind the server to `0.0.0.0:1080`.
@@ -73,7 +73,7 @@ After pulling or building the image, you can run the server with:
 
 ```bash
 docker run -d -p 1080:1080 \
-  -v /path/to/users.toml:/etc/koblas/users.toml \
+  -v /path/to/config.toml:/etc/koblas/config.toml \
   -e RUST_LOG=debug \
   -e KOBLAS_NO_AUTHENTICATION=false \
   -e KOBLAS_ANONYMIZE=false \
@@ -99,7 +99,7 @@ services:
       KOBLAS_NO_AUTHENTICATION: false
       KOBLAS_ANONYMIZATION: true
     volumes:
-      - /path/to/users.toml:/etc/koblas/users.toml
+      - /path/to/config.toml:/etc/koblas/config.toml
 ```
 
 ## Configuration
@@ -115,15 +115,15 @@ Missing keys will fall back to their default value.
 | `KOBLAS_LIMIT`             | Maximum amount of clients to handle at once                                 | `255`       |
 | `KOBLAS_NO_AUTHENTICATION` | Don't require clients to authenticate using a username/password combination | `false`     |
 | `KOBLAS_ANONYMIZATION`     | Exclude sensitive information from the logs                                 | `false`     |
-| `KOBLAS_USERS_PATH`        | File path to the list of existing users                                     | `None`      |
+| `KOBLAS_CONFIG_PATH`       | File path to the config file                                                | `None`      |
 
 > :warning: The default configuration requires everyone to connect with a pre-existing username/password combination.
 
-Koblas doesn't have a default users file location, but we recommend the following locations:
+Koblas doesn't have a default config file location, but we recommend the following locations:
 
-* Linux: `/etc/koblas/users.toml`
-* MacOS: `/etc/koblas/users.toml`
-* Windows: `%ProgramData%\koblas\users.toml`
+* Linux: `/etc/koblas/config.toml`
+* MacOS: `/etc/koblas/config.toml`
+* Windows: `%ProgramData%\koblas\config.toml`
 
 ### Example
 
