@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::{fs, str};
 use toml::de;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
