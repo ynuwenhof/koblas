@@ -205,6 +205,11 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
     let mut buf = [0u8; 4];
     stream.read_exact(&mut buf).await?;
 
+    let ver = buf[0];
+    if ver != SOCKS_VERSION {
+        return Err(Error::InvalidVersion);
+    }
+
     let (mut peer, local_addr) = match socks(stream, buf).await {
         Ok(t) => t,
         Err(e) => {
