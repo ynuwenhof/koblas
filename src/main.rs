@@ -2,7 +2,7 @@ mod config;
 mod error;
 
 use crate::config::Config;
-use crate::error::{AuthError, Error, SocksError};
+use crate::error::Error;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use clap::{Parser, Subcommand};
@@ -172,10 +172,7 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
 
     let ver = buf[0];
     if ver != SOCKS_VERSION {
-        return Err(Error::InvalidVersion {
-            expected: SOCKS_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
     let len = buf[1] as usize;
@@ -201,7 +198,7 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
             stream.write_all(&buf).await?;
             res?;
         }
-        NO_METHOD => return Err(Error::MethodNotFound),
+        NO_METHOD => return Err(Error::NoAcceptableMethod),
         _ => {}
     }
 
@@ -210,18 +207,15 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
 
     let ver = buf[0];
     if ver != SOCKS_VERSION {
-        return Err(Error::InvalidVersion {
-            expected: SOCKS_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
     let mut reply = SUCCESS_REPLY;
     let res = socks(stream, buf).await;
     if let Err(ref err) = res {
         reply = match err {
-            SocksError::InvalidAddr { .. } => 0x8,
-            SocksError::InvalidCommand { .. } => 0x7,
+            Error::AddrUnsupported => 0x8,
+            Error::CommandUnsupported => 0x7,
             _ => 0x1,
         }
     }
@@ -242,16 +236,13 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
     Ok(())
 }
 
-async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthError> {
+async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
     let ver = buf[0];
     if ver != AUTH_VERSION {
-        return Err(AuthError::InvalidVersion {
-            expected: AUTH_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
     let len = buf[1] as usize;
@@ -264,10 +255,7 @@ async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthErr
     stream.read_exact(&mut buf).await?;
     let password = String::from_utf8(buf)?;
 
-    let pass = config
-        .users
-        .get(&username)
-        .ok_or(AuthError::UsernameNotFound(username.to_owned()))?;
+    let pass = config.users.get(&username).ok_or(Error::UsernameNotFound)?;
 
     let hash = PasswordHash::new(pass)?;
     Argon2::default().verify_password(password.as_bytes(), &hash)?;
@@ -283,13 +271,10 @@ const IPV6_TYPE: u8 = 0x4;
 const DOMAIN_TYPE: u8 = 0x3;
 const CONNECT_COMMAND: u8 = 0x1;
 
-async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksError> {
+async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<TcpStream> {
     let cmd = buf[1];
     if cmd != CONNECT_COMMAND {
-        return Err(SocksError::InvalidCommand {
-            expected: CONNECT_COMMAND,
-            found: cmd,
-        });
+        return Err(Error::CommandUnsupported);
     }
 
     let addr = buf[3];
@@ -321,10 +306,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             vec![SocketAddr::new(IpAddr::from(octets), port)]
         }
         _ => {
-            return Err(SocksError::InvalidAddr {
-                expected: vec![IPV4_TYPE, DOMAIN_TYPE, IPV6_TYPE],
-                found: addr,
-            })
+            return Err(Error::AddrUnsupported);
         }
     };
 
