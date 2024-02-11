@@ -7,6 +7,7 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use clap::{Parser, Subcommand};
 use rand_core::OsRng;
+use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -61,9 +62,9 @@ fn main() -> error::Result<()> {
 
     if let Some(Command::Hash { password }) = cli.command {
         let salt = SaltString::generate(&mut OsRng);
-
         let hash = Argon2::default().hash_password(password.as_bytes(), &salt)?;
         println!("{hash}");
+
         return Ok(());
     }
 
@@ -106,8 +107,8 @@ async fn run(cli: Cli, config: Config) -> error::Result<()> {
     loop {
         let (mut stream, addr) = match listener.accept().await {
             Ok(s) => s,
-            Err(err) => {
-                error!("{err}");
+            Err(e) => {
+                error!("{e}");
                 continue;
             }
         };
@@ -142,8 +143,8 @@ async fn run(cli: Cli, config: Config) -> error::Result<()> {
 
                 info!("connected");
 
-                if let Err(err) = handle(&mut stream, cli, config).await {
-                    error!("{err}");
+                if let Err(e) = handle(&mut stream, cli, config).await {
+                    error!("{e}");
                 }
 
                 clients.fetch_sub(1, Ordering::SeqCst);
@@ -204,30 +205,49 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
     let mut buf = [0u8; 4];
     stream.read_exact(&mut buf).await?;
 
-    let ver = buf[0];
-    if ver != SOCKS_VERSION {
-        return Err(Error::InvalidVersion);
-    }
+    let (mut peer, local_addr) = match socks(stream, buf).await {
+        Ok(t) => t,
+        Err(e) => {
+            let reply = match &e {
+                Error::AddrUnsupported => 0x8,
+                Error::CommandUnsupported => 0x7,
+                Error::Io(e) => {
+                    // TODO: https://github.com/rust-lang/rust/issues/86442
+                    match e.kind() {
+                        ErrorKind::ConnectionRefused => 0x5,
+                        _ => 0x1,
+                    }
+                }
+                _ => 0x1,
+            };
 
-    let mut reply = SUCCESS_REPLY;
-    let res = socks(stream, buf).await;
-    if let Err(ref err) = res {
-        reply = match err {
-            Error::AddrUnsupported => 0x8,
-            Error::CommandUnsupported => 0x7,
-            _ => 0x1,
+            let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
+            stream.write_all(&buf).await?;
+
+            return Err(e);
+        }
+    };
+
+    let span = Span::current();
+    span.record("peer", field::display(local_addr));
+
+    let mut buf = Vec::with_capacity(22);
+    buf.extend([SOCKS_VERSION, SUCCESS_REPLY, 0]);
+
+    match local_addr.ip() {
+        IpAddr::V4(i) => {
+            buf.push(IPV4_TYPE);
+            buf.extend(i.octets());
+        }
+        IpAddr::V6(i) => {
+            buf.push(IPV6_TYPE);
+            buf.extend(i.octets());
         }
     }
 
-    let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
-
+    let port = local_addr.port().to_le_bytes();
+    buf.extend(port);
     stream.write_all(&buf).await?;
-
-    let mut peer = res?;
-    if let Ok(addr) = peer.peer_addr() {
-        let span = Span::current();
-        span.record("peer", field::display(addr));
-    }
 
     let (sent, received) = io::copy_bidirectional(stream, &mut peer).await?;
     info!("sent {sent} bytes and received {received} bytes");
@@ -270,7 +290,7 @@ const IPV6_TYPE: u8 = 0x4;
 const DOMAIN_TYPE: u8 = 0x3;
 const CONNECT_COMMAND: u8 = 0x1;
 
-async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<TcpStream> {
+async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<(TcpStream, SocketAddr)> {
     let cmd = buf[1];
     if cmd != CONNECT_COMMAND {
         return Err(Error::CommandUnsupported);
@@ -309,5 +329,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<TcpStream>
         }
     };
 
-    Ok(TcpStream::connect(&dest[..]).await?)
+    let stream = TcpStream::connect(&dest[..]).await?;
+    let addr = stream.local_addr()?;
+    Ok((stream, addr))
 }
