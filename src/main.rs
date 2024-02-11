@@ -281,11 +281,11 @@ async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()> 
 
     let pass = config.users.get(&username).ok_or(Error::UsernameNotFound)?;
 
-    let hash = PasswordHash::new(pass)?;
-    Argon2::default().verify_password(password.as_bytes(), &hash)?;
-
     let span = Span::current();
     span.record("user", field::display(username));
+
+    let hash = PasswordHash::new(pass)?;
+    Argon2::default().verify_password(password.as_bytes(), &hash)?;
 
     Ok(())
 }
@@ -301,8 +301,8 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<(TcpStream
         return Err(Error::CommandUnsupported);
     }
 
-    let addr = buf[3];
-    let dest = match addr {
+    let addr_type = buf[3];
+    let dest = match addr_type {
         IPV4_TYPE => {
             let mut octets = [0u8; 4];
             stream.read_exact(&mut octets).await?;
@@ -329,9 +329,7 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<(TcpStream
             let port = stream.read_u16().await?;
             vec![SocketAddr::new(IpAddr::from(octets), port)]
         }
-        _ => {
-            return Err(Error::AddrUnsupported);
-        }
+        _ => return Err(Error::AddrUnsupported),
     };
 
     let stream = TcpStream::connect(&dest[..]).await?;
