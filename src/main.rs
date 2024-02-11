@@ -52,11 +52,10 @@ fn install_tracing() {
         .init();
 }
 
-fn main() -> color_eyre::Result<()> {
+fn main() -> error::Result<()> {
     let cli = Cli::parse();
 
     install_tracing();
-    color_eyre::install()?;
 
     debug!("{cli:?}");
 
@@ -92,7 +91,7 @@ fn main() -> color_eyre::Result<()> {
         .block_on(run(cli, config))
 }
 
-async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
+async fn run(cli: Cli, config: Config) -> error::Result<()> {
     let listener = TcpListener::bind((cli.addr, cli.port)).await?;
 
     info!(

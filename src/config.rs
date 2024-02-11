@@ -1,3 +1,4 @@
+use crate::error;
 use ipnet::IpNet;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -19,7 +20,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_path(path: impl AsRef<Path>) -> color_eyre::Result<Self> {
+    pub fn from_path(path: impl AsRef<Path>) -> error::Result<Self> {
         let path = path.as_ref();
 
         let buf = fs::read(path)?;
