@@ -2,11 +2,12 @@ mod config;
 mod error;
 
 use crate::config::Config;
-use crate::error::{AuthError, Error, SocksError};
+use crate::error::Error;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use clap::{Parser, Subcommand};
 use rand_core::OsRng;
+use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -52,19 +53,18 @@ fn install_tracing() {
         .init();
 }
 
-fn main() -> color_eyre::Result<()> {
+fn main() -> error::Result<()> {
     let cli = Cli::parse();
 
     install_tracing();
-    color_eyre::install()?;
 
     debug!("{cli:?}");
 
     if let Some(Command::Hash { password }) = cli.command {
         let salt = SaltString::generate(&mut OsRng);
-
         let hash = Argon2::default().hash_password(password.as_bytes(), &salt)?;
         println!("{hash}");
+
         return Ok(());
     }
 
@@ -92,7 +92,7 @@ fn main() -> color_eyre::Result<()> {
         .block_on(run(cli, config))
 }
 
-async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
+async fn run(cli: Cli, config: Config) -> error::Result<()> {
     let listener = TcpListener::bind((cli.addr, cli.port)).await?;
 
     info!(
@@ -107,8 +107,8 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
     loop {
         let (mut stream, addr) = match listener.accept().await {
             Ok(s) => s,
-            Err(err) => {
-                error!("{err}");
+            Err(e) => {
+                error!("{e}");
                 continue;
             }
         };
@@ -143,8 +143,8 @@ async fn run(cli: Cli, config: Config) -> color_eyre::Result<()> {
 
                 info!("connected");
 
-                if let Err(err) = handle(&mut stream, cli, config).await {
-                    error!("{err}");
+                if let Err(e) = handle(&mut stream, cli, config).await {
+                    error!("{e}");
                 }
 
                 clients.fetch_sub(1, Ordering::SeqCst);
@@ -172,10 +172,7 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
 
     let ver = buf[0];
     if ver != SOCKS_VERSION {
-        return Err(Error::InvalidVersion {
-            expected: SOCKS_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
     let len = buf[1] as usize;
@@ -201,7 +198,7 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
             stream.write_all(&buf).await?;
             res?;
         }
-        NO_METHOD => return Err(Error::MethodNotFound),
+        NO_METHOD => return Err(Error::NoAcceptableMethod),
         _ => {}
     }
 
@@ -210,31 +207,52 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
 
     let ver = buf[0];
     if ver != SOCKS_VERSION {
-        return Err(Error::InvalidVersion {
-            expected: SOCKS_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
-    let mut reply = SUCCESS_REPLY;
-    let res = socks(stream, buf).await;
-    if let Err(ref err) = res {
-        reply = match err {
-            SocksError::InvalidAddr { .. } => 0x8,
-            SocksError::InvalidCommand { .. } => 0x7,
-            _ => 0x1,
+    let (mut peer, local_addr) = match socks(stream, buf).await {
+        Ok(t) => t,
+        Err(e) => {
+            let reply = match &e {
+                Error::AddrUnsupported => 0x8,
+                Error::CommandUnsupported => 0x7,
+                Error::Io(e) => {
+                    // TODO: https://github.com/rust-lang/rust/issues/86442
+                    match e.kind() {
+                        ErrorKind::ConnectionRefused => 0x5,
+                        _ => 0x1,
+                    }
+                }
+                _ => 0x1,
+            };
+
+            let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
+            stream.write_all(&buf).await?;
+
+            return Err(e);
+        }
+    };
+
+    let span = Span::current();
+    span.record("peer", field::display(local_addr));
+
+    let mut buf = Vec::with_capacity(22);
+    buf.extend([SOCKS_VERSION, SUCCESS_REPLY, 0]);
+
+    match local_addr.ip() {
+        IpAddr::V4(i) => {
+            buf.push(IPV4_TYPE);
+            buf.extend(i.octets());
+        }
+        IpAddr::V6(i) => {
+            buf.push(IPV6_TYPE);
+            buf.extend(i.octets());
         }
     }
 
-    let buf = [SOCKS_VERSION, reply, 0, IPV4_TYPE, 0, 0, 0, 0, 0, 0];
-
+    let port = local_addr.port().to_le_bytes();
+    buf.extend(port);
     stream.write_all(&buf).await?;
-
-    let mut peer = res?;
-    if let Ok(addr) = peer.peer_addr() {
-        let span = Span::current();
-        span.record("peer", field::display(addr));
-    }
 
     let (sent, received) = io::copy_bidirectional(stream, &mut peer).await?;
     info!("sent {sent} bytes and received {received} bytes");
@@ -242,16 +260,13 @@ async fn handle(stream: &mut TcpStream, cli: Arc<Cli>, config: Arc<Config>) -> e
     Ok(())
 }
 
-async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthError> {
+async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> error::Result<()> {
     let mut buf = [0u8; 2];
     stream.read_exact(&mut buf).await?;
 
     let ver = buf[0];
     if ver != AUTH_VERSION {
-        return Err(AuthError::InvalidVersion {
-            expected: AUTH_VERSION,
-            found: ver,
-        });
+        return Err(Error::InvalidVersion);
     }
 
     let len = buf[1] as usize;
@@ -264,16 +279,13 @@ async fn auth(stream: &mut TcpStream, config: Arc<Config>) -> Result<(), AuthErr
     stream.read_exact(&mut buf).await?;
     let password = String::from_utf8(buf)?;
 
-    let pass = config
-        .users
-        .get(&username)
-        .ok_or(AuthError::UsernameNotFound(username.to_owned()))?;
-
-    let hash = PasswordHash::new(pass)?;
-    Argon2::default().verify_password(password.as_bytes(), &hash)?;
+    let pass = config.users.get(&username).ok_or(Error::UsernameNotFound)?;
 
     let span = Span::current();
     span.record("user", field::display(username));
+
+    let hash = PasswordHash::new(pass)?;
+    Argon2::default().verify_password(password.as_bytes(), &hash)?;
 
     Ok(())
 }
@@ -283,17 +295,14 @@ const IPV6_TYPE: u8 = 0x4;
 const DOMAIN_TYPE: u8 = 0x3;
 const CONNECT_COMMAND: u8 = 0x1;
 
-async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksError> {
+async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> error::Result<(TcpStream, SocketAddr)> {
     let cmd = buf[1];
     if cmd != CONNECT_COMMAND {
-        return Err(SocksError::InvalidCommand {
-            expected: CONNECT_COMMAND,
-            found: cmd,
-        });
+        return Err(Error::CommandUnsupported);
     }
 
-    let addr = buf[3];
-    let dest = match addr {
+    let addr_type = buf[3];
+    let dest = match addr_type {
         IPV4_TYPE => {
             let mut octets = [0u8; 4];
             stream.read_exact(&mut octets).await?;
@@ -320,13 +329,10 @@ async fn socks(stream: &mut TcpStream, buf: [u8; 4]) -> Result<TcpStream, SocksE
             let port = stream.read_u16().await?;
             vec![SocketAddr::new(IpAddr::from(octets), port)]
         }
-        _ => {
-            return Err(SocksError::InvalidAddr {
-                expected: vec![IPV4_TYPE, DOMAIN_TYPE, IPV6_TYPE],
-                found: addr,
-            })
-        }
+        _ => return Err(Error::AddrUnsupported),
     };
 
-    Ok(TcpStream::connect(&dest[..]).await?)
+    let stream = TcpStream::connect(&dest[..]).await?;
+    let addr = stream.local_addr()?;
+    Ok((stream, addr))
 }
