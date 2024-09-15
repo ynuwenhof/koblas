@@ -10,20 +10,20 @@ license = "MIT OR Apache-2.0"
 keywords = ["proxy", "socks", "server"]
 
 [dependencies]
-toml = "0.8.8"
+toml = "0.8.19"
 tracing = "0.1.40"
 tracing-error = "0.2.0"
 
 [dependencies.argon2]
-version = "0.5.2"
+version = "0.5.3"
 features = ["std"]
 
 [dependencies.clap]
-version = "4.4.18"
+version = "4.5.17"
 features = ["derive", "env"]
 
 [dependencies.ipnet]
-version = "2.9.0"
+version = "2.10.0"
 features = ["serde"]
 
 [dependencies.rand_core]
@@ -31,11 +31,11 @@ version = "0.6.4"
 features = ["std"]
 
 [dependencies.serde]
-version = "1.0.195"
+version = "1.0.210"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "1.35.1"
+version = "1.40.0"
 features = ["fs", "net", "io-util", "rt-multi-thread"]
 
 [dependencies.tracing-subscriber]
