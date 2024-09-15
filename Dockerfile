@@ -1,4 +1,4 @@
-FROM rust:alpine AS builder
+FROM --platform=$BUILDPLATFORM rust:alpine AS builder
 RUN apk add --no-cache musl-dev
 WORKDIR /usr/src/koblas
 COPY . .
